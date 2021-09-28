@@ -107,11 +107,17 @@ case class InsertIntoHadoopFsRelationCommand(
     }
 
     val jobId = java.util.UUID.randomUUID().toString
-    val committer = FileCommitProtocol.instantiate(
+//    val committer = FileCommitProtocol.instantiate(
+//      sparkSession.sessionState.conf.fileCommitProtocolClass,
+//      jobId = jobId,
+//      outputPath = outputPath.toString,
+//      dynamicPartitionOverwrite = dynamicPartitionOverwrite)
+    val fileFormatMergedWriter = FileFormatMergedWriter(
       sparkSession.sessionState.conf.fileCommitProtocolClass,
       jobId = jobId,
       outputPath = outputPath.toString,
-      dynamicPartitionOverwrite = dynamicPartitionOverwrite)
+      dynamicPartitionOverwrite = dynamicPartitionOverwrite
+    )
 
     val doInsertion = if (mode == SaveMode.Append) {
       true
@@ -127,7 +133,8 @@ case class InsertIntoHadoopFsRelationCommand(
             // For dynamic partition overwrite, do not delete partition directories ahead.
             true
           } else {
-            deleteMatchingPartitions(fs, qualifiedOutputPath, customPartitionLocations, committer)
+            deleteMatchingPartitions(fs, qualifiedOutputPath, customPartitionLocations,
+              fileFormatMergedWriter.committer)
             true
           }
         case (SaveMode.Overwrite, _) | (SaveMode.ErrorIfExists, false) =>
@@ -174,11 +181,10 @@ case class InsertIntoHadoopFsRelationCommand(
       }
 
       val updatedPartitionPaths =
-        FileFormatWriter.write(
+        fileFormatMergedWriter.write(
           sparkSession = sparkSession,
           plan = child,
           fileFormat = fileFormat,
-          committer = committer,
           outputSpec = FileFormatWriter.OutputSpec(
             committerOutputPath.toString, customPartitionLocations, outputColumns),
           hadoopConf = hadoopConf,

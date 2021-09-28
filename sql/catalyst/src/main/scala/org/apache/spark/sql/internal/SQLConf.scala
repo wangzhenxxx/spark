@@ -3040,6 +3040,20 @@ object SQLConf {
       .booleanConf
       .createWithDefault(false)
 
+  val MERGE_FILES_ENABLE = buildConf("spark.sql.merge.enable")
+    .doc("When true, Spark will merge small files at the end of job")
+    .version("3.2.0")
+    .booleanConf
+    .createWithDefault(false)
+
+  val MERGE_FILES_AVG_SIZE = buildConf("spark.sql.merge.smallFiles.avgSize")
+    .doc(s"${MERGE_FILES_ENABLE.key} is true, and the average output file size of a job " +
+        "is less than this number, spark will start a additionial job to merge the output" +
+        " files into bigger files.")
+    .version("3.2.0")
+    .bytesConf(ByteUnit.BYTE)
+    .createWithDefaultString("16MB")
+
   /**
    * Holds information about keys that have been deprecated.
    *
@@ -3693,6 +3707,10 @@ class SQLConf extends Serializable with Logging {
   def disabledJdbcConnectionProviders: String = getConf(SQLConf.DISABLED_JDBC_CONN_PROVIDER_LIST)
 
   def charVarcharAsString: Boolean = getConf(SQLConf.LEGACY_CHAR_VARCHAR_AS_STRING)
+
+  def mergeFilesEnable: Boolean = getConf(SQLConf.MERGE_FILES_ENABLE)
+
+  def mergeFilesAvgSize: Long = getConf(SQLConf.MERGE_FILES_AVG_SIZE)
 
   /** ********************** SQLConf functionality methods ************ */
 
